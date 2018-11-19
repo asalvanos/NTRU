@@ -74,7 +74,6 @@ while flag1 == false or flag2 == false:
 Fq = 1/Sq(f);      ### Computation of the inverse of f modq
 Fp = 1/Sp(f);      ### Computation of the inverse of f modp
 h  = Fq*S(g);      ### Public key
-pk=h.list()
 
 
 #######  Encryption
