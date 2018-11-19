@@ -1,0 +1,111 @@
+################ SageMath code ####################
+
+
+
+############# Run experiments to check the cardinality of the set S. The S is the set of all rotations of the private key f, in which 2c1 of the 
+############# last r coefficients are equal to 1 and 2c_1 of the last r coefficients are equal to -1. (By r we denote the meet-in-the-middle ############# dimension of the hybrid attack.)
+
+
+
+import time
+
+####### Define parameters N,p,q
+N=71
+q=401
+p=3
+d=24
+
+###### Define convolution polynomial rigs
+Rq.<x> = PolynomialRing(GF(q))
+I = Rq.ideal([x^N-1])
+Sq = Rq.quotient_ring(I)
+
+Rp.<x> = PolynomialRing(GF(p))
+I = Rp.ideal([x^N-1])
+Sp = Rp.quotient_ring(I)
+
+R.<x> = PolynomialRing(ZZ)
+I = R.ideal([x^N-1])
+S = R.quotient_ring(I)
+
+
+
+######## Define a function which retuens a trinary polynomial with d1 1's and d2 -1's
+def trinary(d1,d2,N):
+    import numpy as np
+    arr=np.array([1] * d1 + [-1] * d2 + [0] * (N-d1-d2))
+    np.random.shuffle(arr)
+    return list(arr)
+
+
+
+######## Define a function which checks if a polynomial is trinary
+def is_trinary(f):
+    is_trinary=true
+    for i in range(len(f)):
+        if f[i]!=0 and f[i]!=-1 and f[i]!=1:
+            return false
+    return(is_trinary)
+
+
+######## Define a function which returns the rotations of the corresponding vector of a polynomial in S
+def rotations(f):
+    result=[]
+    for i in range(len(f)):
+        temp=[f[j-i] for j in range(len(f))]
+        if temp not in result:
+            result.append(temp)
+    return(result)
+
+r=23 ### Meet-in-the middle dimension
+n1=8 ### Number of 1s in the last r coefficients of f to check
+n2=8 ### Number of -1s in the last r coefficients of f to check
+
+
+### Generate a private key pair (g,f) k times and check how many of them there exists at least one rotation of f with
+### n1 1s and n2 -1s in the last r coefficients. 
+
+
+S = []  ### Create a list where each of the k times we append the number of rotations of f for which the above property holds.
+
+for k in range(1000):
+    
+    ### Generate the key
+    flag1 = false
+    flag2 = false
+    while flag1 == false or flag2 == false:
+        f=trinary(d+1,d,N)
+        g=trinary(d,d,N)
+        if Sq(f).is_unit == false:
+            flag1=false
+        else:
+            flag1=true
+        if Sp(f).is_unit == false:
+            flag2=false
+        else:
+            flag2=true
+    
+    #print "f = ", f
+    
+    ### Check the rotations
+    count_flag = 0    ### Count for how many rotations of f it holds that n1 of the last r coefficints are equal to 1 and n2 are equal to -1.
+    for i in range(N):
+        flag = false
+        v = rotations(f)[i]
+        count1 = 0          ### Count 1s on the last r coefficients of the rotation i of f.
+        count2 = 0          ### Count -1s on the last r coefficients of the rotation i of f.
+        for j in range(2*N-r-N,2*N-N):
+            if v[j] == 1:
+                count1 = count1+1
+            elif v[j] == -1:
+                count2 = count2+1
+        #print count1
+        #print count2
+        if count1 == n1 and count2 == n2:
+            flag = true
+        if flag == true:
+            count_flag = count_flag+1
+            
+    S.append(count_flag)
+
+print S
