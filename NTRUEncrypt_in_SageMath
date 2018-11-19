@@ -1,0 +1,95 @@
+import itertools
+
+####### Define parameters N,p,q
+N=401
+p=3
+q=2017
+d=134
+
+###### Define convolution polynomial rigs
+Rq.<x> = PolynomialRing(GF(q))
+I = Rq.ideal([x^N-1])
+Sq = Rq.quotient_ring(I)
+
+Rp.<x> = PolynomialRing(GF(p))
+I = Rp.ideal([x^N-1])
+Sp = Rp.quotient_ring(I)
+
+R.<x> = PolynomialRing(ZZ)
+I = R.ideal([x^N-1])
+S = R.quotient_ring(I)
+
+###### Define centerlift operation
+def centerlift(f,q):
+    f=lift(f)
+    L=f.list()
+    #L=f.coefficients()
+    for i in range(len(L)):
+        if Integer(L[i])>q/2:
+            L[i]=Integer(L[i])-q
+    return L
+
+
+######## Define a function which retuens a trinary polynomial with d1 1's and d2 -1's
+def trinary(d1,d2,N):
+    import numpy as np
+    arr=np.array([1] * d1 + [-1] * d2 + [0] * (N-d1-d2))
+    np.random.shuffle(arr)
+    return list(arr)
+
+
+
+######## Define a function which checks if a polynomial is trinary
+def is_trinary(f):
+    is_trinary=true
+    for i in range(len(f)):
+        if f[i]!=0 and f[i]!=1 and f[i]!=-1:
+            is_trinary=false
+    return(is_trinary)
+
+
+###### Size of the set of trinary polynomials
+def number_of_tr(N,d1,d2):
+    n=binomial(N,d1)*binomial(N-d1,d2)
+    return(n)
+
+
+
+#######  Key Generation
+####### Create two randomly chosen polynomials f,g in R
+####### f has d+1 1's and d -1's and is invertible modq and modp
+####### g has d 1's and d -1's
+flag1 = false
+flag2 = false
+while flag1 == false or flag2 == false:
+    f=trinary(d+1,d,N)
+    g=trinary(d,d,N)
+    if Sq(f).is_unit == false:
+        flag1=false
+    else:
+        flag1=true
+    if Sp(f).is_unit == false:
+        flag2=false
+    else:
+        flag2=true
+
+Fq = 1/Sq(f);      ### Computation of the inverse of f modq
+Fp = 1/Sp(f);      ### Computation of the inverse of f modp
+h  = Fq*S(g);      ### Public key
+pk=h.list()
+
+
+#######  Encryption
+m = [ZZ.random_element(-1,2) for i in range(N)];    ###  Message
+
+
+def NTRUEncrypt(m):
+    r = trinary(d,d,N)         ### Ephemeral key
+    e = p*S(r)*S(h) + S(m)     ### Encrypted message
+    return(Sq(e),r)
+
+
+#######  Decryption
+def NTRUDecrypt(e):
+    v=centerlift(S(f)*Sq(e),q)
+    return(centerlift(Fp*S(v),p))
