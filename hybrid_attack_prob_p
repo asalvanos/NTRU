@@ -1,0 +1,216 @@
+import time
+
+####### Define parameters N,p,q
+N=71
+q=401
+p=3
+d=24
+
+###### Define convolution polynomial rigs
+Rq.<x> = PolynomialRing(GF(q))
+I = Rq.ideal([x^N-1])
+Sq = Rq.quotient_ring(I)
+
+Rp.<x> = PolynomialRing(GF(p))
+I = Rp.ideal([x^N-1])
+Sp = Rp.quotient_ring(I)
+
+R.<x> = PolynomialRing(ZZ)
+I = R.ideal([x^N-1])
+S = R.quotient_ring(I)
+
+
+
+######## Define a function which retuens a trinary polynomial with d1 1's and d2 -1's
+def trinary(d1,d2,N):
+    import numpy as np
+    arr=np.array([1] * d1 + [-1] * d2 + [0] * (N-d1-d2))
+    np.random.shuffle(arr)
+    return list(arr)
+
+
+
+######## Define a function which checks if a polynomial is trinary
+def is_trinary(f):
+    is_trinary=true
+    for i in range(len(f)):
+        if f[i]!=0 and f[i]!=-1 and f[i]!=1:
+            return false
+    return(is_trinary)
+
+
+######## Define a function which returns the rotations of the corresponding vector of a polynomial in S
+def rotations(f):
+    result=[]
+    for i in range(len(f)):
+        temp=[f[j-i] for j in range(len(f))]
+        if temp not in result:
+            result.append(temp)
+    return(result)
+
+
+
+
+def combinations(iterable, r):
+    # combinations('ABCD', 2) --> AB AC AD BC BD CD
+    # combinations(range(4), 3) --> 012 013 023 123
+    pool = tuple(iterable)
+    n = len(pool)
+    if r > n:
+        return
+    indices = range(r)
+    yield tuple(pool[i] for i in indices)
+    while True:
+        for i in reversed(range(r)):
+            if indices[i] != i + n - r:
+                break
+        else:
+            return
+        indices[i] += 1
+        for j in range(i+1, r):
+            indices[j] = indices[j-1] + 1
+        yield tuple(pool[i] for i in indices)
+
+
+def trinary_pol(n,d1,d2):
+    result = []
+    l1 = []
+    for bits in combinations(range(n), d1):
+        l = [0 for i in range(n)]
+        for bit in bits:
+            l[bit] = 1   
+        s=list(l)
+        l1=[]
+        for i in range(len(l)):
+            if l[i]==0:
+                l1.append(i)
+        for bits in combinations(range(n-d1),d2):
+            l=list(s)
+            for bit in bits:
+                l[l1[bit]] = -1
+            result.append(l)
+    return result
+
+
+
+
+
+
+
+#######  Key Generation
+####### Create two randomly chosen polynomials f,g in R
+####### f has d+1 1's and d -1's and is invertible modq and modp
+####### g has d 1's and d -1's
+flag1 = false
+flag2 = false
+while flag1 == false or flag2 == false:
+    f=trinary(d+1,d,N)
+    g=trinary(d,d,N)
+    if Sq(f).is_unit == false:
+        flag1=false
+    else:
+        flag1=true
+    if Sp(f).is_unit == false:
+        flag2=false
+    else:
+        flag2=true
+
+Fq = 1/Sq(f);      ### Computation of the inverse of f modq
+Fp = 1/Sp(f);      ### Computation of the inverse of f modp
+h  = Fq*S(g);      ### Public key
+pk=h.list()
+
+
+
+####### Define a function which takes as input the parameters N,q and the public h, and returns the basis matrix of the NTRU lattice.
+def NTRU_Lattice(N,q,h):
+    M=matrix(2*N,2*N)
+    for i in range(2*N):
+        for j in range(2*N):
+            M[i,j]==0
+    for i in range(N):
+        for j in range(N):
+            if i==j:
+                M[i,i]=q
+    for i in range(N,2*N):
+        for j in range(N,2*N):
+            if i==j:
+                M[i,i]=1
+    for j in range(0,N):
+            M[N,j]=h[j]
+    for i in range(N+1,2*N):
+        for j in range(0,N):
+            if j==0:
+                M[i,j]=M[i-1,N-1]
+            if j>0:
+                M[i,j]=M[i-1,j-1]
+    return(M)
+    
+    
+B=NTRU_Lattice(N,q,pk)
+#show(B)
+print "h =", pk
+
+
+
+r=23   #### Meet-in-the-middle dimension.
+c1=4    #### The half of the number of 1's in a rotation of f.  
+c_1=4   #### The half of the number of -1's in a rotation of f. 
+####### We assume that there exists a rotation of f with 2*c1 1's and 2*c_1 -1's in the last r coefficients. 
+
+###### Construct the (2N-r)x(2N-r) lower triangular matrix A.  
+A=[]
+for i in range(2*N-r):
+    row=[]
+    for j in range(2*N-r):
+        row.append(B[i,j])
+    A.append(row)
+A=matrix(A)
+
+a3 = time.time()
+A_red = A.BKZ()  ########## Apply lattice reduction to A.
+print "Time to reduce the matrix A \n", time.time() - a3 ,"\n"
+
+a4 = time.time()
+A_red_GS = A_red.gram_schmidt()[0]           ########## Compute the Gram-Schmidt basis of A_red.
+print  "Time to compute the Gram Schmidt matrix of the redudec matrix of A \n", time.time() - a4,"\n"
+
+
+########### Construct the rx(2N-r)  matrix C.  
+C=[]
+for i in range(2*N-r,2*N):
+    row=[]
+    for j in range(2*N-r):
+        row.append(B[i,j])
+    C.append(row)
+C=matrix(C)
+
+
+########### Using the function trinary_pol() we make a list L with all possible r last coefficients of a rotation of f, with  2*c1 1's and 2*c_1 -1's in the last r coefficients. Then, for each element v in L we apply the NP algorithm with basis matrix A_red and target vector v*C. We denote the output by s. If s is trinary, then we create a vector f_cand with the last N coefficients of (s|v) and check if f_cand=f. 
+
+
+
+F(t,z) = (1-t^2)^((2*N-r-3)/2)
+
+Y = sqrt(4*d+1 - 2*c1 - 2*c_1)
+print "Y = ", Y
+
+euler = beta((2*N-r-1)/2,1/2)
+
+
+#print "Lengths of the Grsm-Schmidt vectors \n"
+#for i in range(2*N-r):
+#    print  RDF(A_red_GS[i].norm())
+
+
+
+prod=1
+for i in range(2*N-r):
+    ri = A_red_GS[i].norm()/(2*Y)
+    ri=QQ(ri.n())
+    coef = (1/(ri*euler)).n()
+    J = coef*RDF(F(t,z).integrate(t,max(-1,z-ri),z+ri).integrate(z,-ri-1,-ri))
+    prod=prod*(1-J)
+    
+
+print "\n Probability ",prod
