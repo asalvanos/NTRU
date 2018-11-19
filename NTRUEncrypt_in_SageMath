@@ -21,9 +21,7 @@ S = R.quotient_ring(I)
 
 ###### Define centerlift operation
 def centerlift(f,q):
-    f=lift(f)
     L=f.list()
-    #L=f.coefficients()
     for i in range(len(L)):
         if Integer(L[i])>q/2:
             L[i]=Integer(L[i])-q
