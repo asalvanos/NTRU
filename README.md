@@ -1,6 +1,6 @@
 # NTRU
 
-The NTRU cryptosystem (NTRUEncrypt) is a post-quantum public key cryptosystem, developed by J. Hoffstein, J. Pipher and J. Silverman [1]. The system is naturally described using polynomial arihtmetic in the quotient rings  R = Z[x]/(x^N-1)  and  Rq = Zq[x]/(x^N-1), for some modulus q. The private and the public key are polynomials in R and Rq, respectively. In practice, the private key has one of the following two forms.
+The NTRU cryptosystem (NTRUEncrypt) is a post-quantum public key cryptosystem, developed by J. Hoffstein, J. Pipher and J. Silverman [1]. It is naturally described using polynomial arihtmetic in the quotient rings  R = Z[x]/(x^N-1)  and  Rq = Zq[x]/(x^N-1), for some modulus q. The private and the public key are polynomials in R and Rq, respectively. In practice, the private key has one of the following two forms.
 
 (i) A pair (f,g), where f,g  are trinary polynomials (i.e. polynomials in R with coefficients in the set {-1,0,1}). 
 
